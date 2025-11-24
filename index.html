@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>貓食熱量密度計算機</title>
+    <!-- 載入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb; /* 輕柔背景色 */
+        }
+        .card {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 0 10px -5px rgba(0, 0, 0, 0.04);
+            transition: all 0.3s ease;
+        }
+        .input-group input, .input-group textarea, .input-group select {
+            transition: all 0.2s ease;
+        }
+        .input-group input:focus, .input-group textarea:focus, .input-group select:focus {
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+        }
+        .history-item:hover {
+            background-color: #f3f4f6;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen flex items-start justify-center">
+
+    <div id="app" class="w-full max-w-4xl space-y-8">
+        <header class="text-center mb-10">
+            <h1 class="text-3xl md:text-4xl font-extrabold text-indigo-700">貓食熱量密度計算機</h1>
+            <p class="text-gray-500 mt-2 text-lg">計算每 100 克（即食基準）食物的熱量（Kcal）並儲存紀錄</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            <!-- 區塊 1: 濕食/罐頭計算 -->
+            <div class="card bg-white p-6 md:p-8 rounded-xl border border-indigo-100">
+                <h2 class="text-2xl font-bold text-indigo-600 mb-6 flex items-center">
+                    <!-- 貓咪罐頭圖示 (inline SVG) -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5a2 2 0 00-2 2v2a2 2 0 002 2h14a2 2 0 002-2v-2a2 2 0 00-2-2zM9 11V9a2 2 0 012-2h2a2 2 0 012 2v2M7 17v-4m10 4v-4" />
+                    </svg>
+                    濕食 / 罐頭 (Wet Food)
+                </h2>
+
+                <div class="space-y-5">
+                    <div class="input-group">
+                        <label for="wet-brand" class="block text-sm font-medium text-gray-700 mb-1">品牌 (Brand)</label>
+                        <input type="text" id="wet-brand" placeholder="例如：A牌"
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none text-lg">
+                    </div>
+                    <div class="input-group">
+                        <label for="wet-name" class="block text-sm font-medium text-gray-700 mb-1">品名 (Product Name)</label>
+                        <input type="text" id="wet-name" placeholder="例如：鮭魚口味罐頭"
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none text-lg">
+                    </div>
+                    <div class="input-group">
+                        <label for="wet-kcal" class="block text-sm font-medium text-gray-700 mb-1">
+                            總熱量 (Kcal / 每份)
+                        </label>
+                        <input type="number" id="wet-kcal" placeholder="例如：85"
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none text-lg">
+                    </div>
+                    
+                    <!-- 濕食重量與單位選擇 -->
+                    <div class="input-group">
+                        <label for="wet-weight" class="block text-sm font-medium text-gray-700 mb-1">
+                            總重量
+                        </label>
+                        <div class="flex">
+                            <input type="number" id="wet-weight" placeholder="例如：85"
+                                   class="flex-grow p-3 border border-gray-300 rounded-l-lg focus:outline-none text-lg">
+                            <select id="wet-unit" class="p-3 border border-gray-300 rounded-r-lg bg-gray-50 text-lg">
+                                <option value="g">g (公克)</option>
+                                <option value="oz">oz (盎司)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 計算與清除按鈕群組 -->
+                    <div class="flex space-x-4 pt-2">
+                        <button onclick="calculateCalorieDensity('wet')"
+                                class="flex-grow bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg shadow-md transition duration-150 ease-in-out">
+                            計算並儲存
+                        </button>
+                        <button onclick="clearInputs('wet')"
+                                class="w-1/4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 rounded-lg shadow-md transition duration-150 ease-in-out">
+                            清除輸入
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mt-6 pt-4 border-t border-gray-200">
+                    <p class="text-sm font-medium text-gray-600">每 100g 熱量 (Kcal)：</p>
+                    <div id="wet-result" class="text-3xl font-extrabold text-indigo-800 mt-1 h-10 flex items-center">
+                        --
+                    </div>
+                </div>
+                <p id="wet-error" class="text-red-500 text-sm mt-3 hidden"></p>
+            </div>
+
+            <!-- 區塊 2: 乾糧計算 -->
+            <div class="card bg-white p-6 md:p-8 rounded-xl border border-pink-100">
+                <h2 class="text-2xl font-bold text-pink-600 mb-6 flex items-center">
+                    <!-- 乾糧/飼料圖示 (inline SVG) -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c1.657 0 3 .895 3 2s-1.343 2-3 2v2m0 0a3 3 0 003-3V6m-6 6a3 3 0 01-3-3V6m0 0a3 3 0 013-3h6a3 3 0 013 3v3a3 3 0 01-3 3h-6zM4 19h16" />
+                    </svg>
+                    乾糧 / 飼料 (Dry Food)
+                </h2>
+
+                <div class="space-y-5">
+                    <div class="input-group">
+                        <label for="dry-brand" class="block text-sm font-medium text-gray-700 mb-1">品牌 (Brand)</label>
+                        <input type="text" id="dry-brand" placeholder="例如：B牌"
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none text-lg">
+                    </div>
+                    <div class="input-group">
+                        <label for="dry-name" class="block text-sm font-medium text-gray-700 mb-1">品名 (Product Name)</label>
+                        <input type="text" id="dry-name" placeholder="例如：雞肉配方飼料"
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none text-lg">
+                    </div>
+                    <div class="input-group">
+                        <label for="dry-kcal" class="block text-sm font-medium text-gray-700 mb-1">
+                            總熱量 (Kcal / 每份或每單位重量)
+                        </label>
+                        <input type="number" id="dry-kcal" placeholder="例如：400"
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none text-lg">
+                    </div>
+                    
+                    <!-- 乾糧重量與單位選擇 -->
+                    <div class="input-group">
+                        <label for="dry-weight" class="block text-sm font-medium text-gray-700 mb-1">
+                            總重量
+                        </label>
+                        <div class="flex">
+                            <input type="number" id="dry-weight" placeholder="例如：100"
+                                   class="flex-grow p-3 border border-gray-300 rounded-l-lg focus:outline-none text-lg">
+                            <select id="dry-unit" class="p-3 border border-gray-300 rounded-r-lg bg-gray-50 text-lg">
+                                <option value="g">g (公克)</option>
+                                <option value="kg">kg (公斤)</option>
+                                <option value="lb">lb (磅)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 計算與清除按鈕群組 -->
+                    <div class="flex space-x-4 pt-2">
+                        <button onclick="calculateCalorieDensity('dry')"
+                                class="flex-grow bg-pink-600 hover:bg-pink-700 text-white font-semibold py-3 rounded-lg shadow-md transition duration-150 ease-in-out">
+                            計算並儲存
+                        </button>
+                        <button onclick="clearInputs('dry')"
+                                class="w-1/4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 rounded-lg shadow-md transition duration-150 ease-in-out">
+                            清除輸入
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mt-6 pt-4 border-t border-gray-200">
+                    <p class="text-sm font-medium text-gray-600">每 100g 熱量 (Kcal)：</p>
+                    <div id="dry-result" class="text-3xl font-extrabold text-pink-800 mt-1 h-10 flex items-center">
+                        --
+                    </div>
+                </div>
+                <p id="dry-error" class="text-red-500 text-sm mt-3 hidden"></p>
+            </div>
+        </div>
+        
+        <!-- 區塊 3: 計算紀錄 -->
+        <div class="card bg-white p-6 md:p-8 rounded-xl border border-gray-200 mt-8">
+            <h3 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                <!-- 紀錄圖示 (inline SVG) -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2m-9 0V3h4v2m-4 0h4m-4 0H7m4 0h4m-4 0v2m0 0v2m0 0h4m0 0V9m0-4V3m0 2h4m-4 0H7m4 0h4m-4 0v2m0 0v2m0 0h4m0 0V9m0-4V3" />
+                </svg>
+                計算紀錄 (History)
+            </h3>
+            <div id="loading-indicator" class="text-center text-gray-500">
+                載入紀錄中...
+            </div>
+            <div id="history-list" class="space-y-4">
+                <!-- 紀錄將透過 JavaScript 渲染到此處 -->
+            </div>
+            <p id="history-empty" class="text-center text-gray-500 mt-4 hidden">尚無紀錄。</p>
+            <p id="auth-status" class="text-xs text-gray-400 mt-4 text-center"></p>
+        </div>
+
+        <div class="card bg-yellow-50 p-6 md:p-8 rounded-xl border border-yellow-200 mt-8">
+            <h3 class="text-xl font-bold text-yellow-700 mb-3">使用說明與小提示</h3>
+            <ul class="list-disc list-inside text-gray-600 space-y-2 text-base">
+                <li>本計算機計算的是「即食基準 (As-Fed Basis)」熱量，也就是食物原樣的熱量密度。</li>
+                <li>熱量數字 (Kcal) 請參考產品包裝上標示的代謝能 (ME) 值。</li>
+                <li>歷史紀錄會自動儲存到資料庫中，並顯示在下方。</li>
+            </ul>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // 設定 Firestore 紀錄路徑
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const RECORD_COLLECTION_PATH = `artifacts/${appId}/public/data/cat_food_records`;
+
+        // 全域變數
+        let db = null;
+        let auth = null;
+        let userId = null;
+        let isAuthReady = false;
+
+        setLogLevel('Debug'); // 開啟 Firebase 偵錯日誌
+
+        // --- Firebase 初始化與驗證 ---
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+
+        if (Object.keys(firebaseConfig).length > 0) {
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+
+            // 處理驗證
+            onAuthStateChanged(auth, async (user) => {
+                const authStatusElement = document.getElementById('auth-status');
+                if (user) {
+                    userId = user.uid;
+                    authStatusElement.textContent = `使用者 ID: ${userId.substring(0, 8)}... (已登入)`;
+                } else {
+                    try {
+                        // 如果沒有 token，則匿名登入
+                        if (typeof __initial_auth_token === 'undefined') {
+                            const anonymousUser = await signInAnonymously(auth);
+                            userId = anonymousUser.user.uid;
+                        } else {
+                            // 使用提供的 custom token 登入
+                            const customTokenUser = await signInWithCustomToken(auth, __initial_auth_token);
+                            userId = customTokenUser.user.uid;
+                        }
+                    } catch (error) {
+                        console.error("Firebase 登入失敗:", error);
+                        userId = crypto.randomUUID(); // Fallback ID
+                        authStatusElement.textContent = `認證失敗，使用本地 ID: ${userId.substring(0, 8)}...`;
+                    }
+                }
+                isAuthReady = true;
+                setupRealtimeListener(); // 驗證完成後開始監聽紀錄
+            });
+            
+        } else {
+            console.error("Firebase 配置遺失。紀錄功能將無法使用。");
+            isAuthReady = true; // 即使沒有 Firebase 也標記為 ready
+        }
+
+
+        /**
+         * 顯示自定義訊息框
+         * @param {string} message 要顯示的訊息
+         * @param {boolean} isError - 是否為錯誤訊息
+         * @param {string} elementId - 錯誤訊息要顯示的元素ID
+         */
+        function showMessage(message, isError = true, elementId) {
+            const errorElement = document.getElementById(elementId);
+            errorElement.textContent = message;
+            errorElement.classList.remove('hidden');
+            if (isError) {
+                errorElement.classList.add('text-red-500');
+            } else {
+                errorElement.classList.remove('text-red-500');
+            }
+            setTimeout(() => {
+                errorElement.classList.add('hidden');
+            }, 5000);
+        }
+        
+        /**
+         * 將計算結果儲存到 Firestore
+         * @param {Object} record - 包含計算結果的物件
+         */
+        async function addRecord(record) {
+            if (!db || !isAuthReady) {
+                console.warn("Firestore 未初始化或驗證未完成，無法儲存紀錄。");
+                return;
+            }
+
+            try {
+                const recordsCollection = collection(db, RECORD_COLLECTION_PATH);
+                await addDoc(recordsCollection, {
+                    ...record,
+                    timestamp: serverTimestamp(), // 使用伺服器時間戳記
+                    userId: userId,
+                });
+            } catch (e) {
+                console.error("寫入紀錄到 Firestore 錯誤:", e);
+                showMessage('無法儲存紀錄，請檢查網路連線或權限。', true, record.type === 'wet' ? 'wet-error' : 'dry-error');
+            }
+        }
+        
+        /**
+         * 渲染歷史紀錄列表
+         * @param {Array<Object>} records - 紀錄列表
+         */
+        function renderHistory(records) {
+            const historyList = document.getElementById('history-list');
+            const historyEmpty = document.getElementById('history-empty');
+            const loadingIndicator = document.getElementById('loading-indicator');
+
+            loadingIndicator.classList.add('hidden');
+            historyList.innerHTML = '';
+            
+            // 將 records 複製一份並在記憶體中進行排序（避免 Firestore order by 造成索引問題）
+            const sortedRecords = records.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
+
+            if (sortedRecords.length === 0) {
+                historyEmpty.classList.remove('hidden');
+                return;
+            }
+            historyEmpty.classList.add('hidden');
+
+            sortedRecords.forEach(record => {
+                const colorClass = record.type === 'wet' ? 'text-indigo-600' : 'text-pink-600';
+                const typeText = record.type === 'wet' ? '濕食' : '乾糧';
+                
+                // 顯示原始重量和單位
+                const originalWeightDisplay = `${record.originalWeight} ${record.originalUnit}`;
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'history-item p-4 border border-gray-100 rounded-lg flex items-center justify-between shadow-sm';
+                
+                const contentDiv = `
+                    <div>
+                        <p class="text-sm text-gray-500">${record.brand || '無品牌'} - ${record.name || '無品名'}</p>
+                        <p class="text-lg font-semibold text-gray-800 mt-0.5">
+                            <span class="${colorClass} font-bold mr-2">【${typeText}】</span>
+                            ${record.totalKcal} Kcal / ${originalWeightDisplay}
+                        </p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm font-medium text-gray-500">Kcal/100g</p>
+                        <p class="text-xl font-extrabold ${colorClass}">${record.caloriesPer100g} Kcal</p>
+                    </div>
+                `;
+                
+                itemDiv.innerHTML = contentDiv;
+                historyList.appendChild(itemDiv);
+            });
+        }
+
+        /**
+         * 設定 Firestore 即時監聽器
+         */
+        function setupRealtimeListener() {
+            if (!db || !isAuthReady) return;
+            
+            const recordsCollectionRef = collection(db, RECORD_COLLECTION_PATH);
+            // 查詢：不使用 orderBy，在客戶端進行排序
+            const q = query(recordsCollectionRef); 
+
+            onSnapshot(q, (snapshot) => {
+                const records = [];
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    // 確保 timestamp 已經存在
+                    if (data.timestamp) {
+                        records.push({ id: doc.id, ...data });
+                    }
+                });
+                renderHistory(records);
+            }, (error) => {
+                console.error("Firestore 監聽失敗:", error);
+                document.getElementById('loading-indicator').textContent = '載入紀錄失敗。';
+            });
+        }
+        
+        /**
+         * 只清除特定類型食物的輸入欄位（不清除結果顯示）
+         * @param {string} type 'wet' or 'dry'
+         */
+        function clearInputFields(type) {
+            document.getElementById(`${type}-brand`).value = '';
+            document.getElementById(`${type}-name`).value = '';
+            document.getElementById(`${type}-kcal`).value = '';
+            document.getElementById(`${type}-weight`).value = '';
+            // 重設單位選擇到預設值
+            document.getElementById(`${type}-unit`).value = (type === 'wet' ? 'g' : 'g'); 
+            document.getElementById(`${type}-error`).classList.add('hidden');
+        }
+
+
+        /**
+         * 清除所有輸入欄位和結果顯示 (給「清除輸入」按鈕使用)
+         * @param {string} type 'wet' or 'dry'
+         */
+        window.clearInputs = function(type) {
+            clearInputFields(type);
+            // 修正：清除輸入時也同時清除結果顯示
+            document.getElementById(`${type}-result`).textContent = '--';
+        }
+
+        /**
+         * 計算每 100g 的卡路里密度
+         * @param {string} type 'wet' for canned food, 'dry' for dry food
+         */
+        window.calculateCalorieDensity = function(type) {
+            const brandInput = document.getElementById(`${type}-brand`);
+            const nameInput = document.getElementById(`${type}-name`);
+            const kcalInput = document.getElementById(`${type}-kcal`);
+            const weightInput = document.getElementById(`${type}-weight`);
+            const unitSelect = document.getElementById(`${type}-unit`);
+            const resultElement = document.getElementById(`${type}-result`);
+            const errorElementId = `${type}-error`;
+
+            // 清除之前的錯誤訊息
+            document.getElementById(errorElementId).classList.add('hidden');
+
+            const totalKcal = parseFloat(kcalInput.value);
+            const originalWeight = parseFloat(weightInput.value);
+            const brand = brandInput.value.trim();
+            const name = nameInput.value.trim();
+            const unit = unitSelect.value;
+
+
+            // 檢查輸入是否為有效數字
+            if (isNaN(totalKcal) || isNaN(originalWeight) || totalKcal <= 0 || originalWeight <= 0) {
+                resultElement.textContent = '--'; // 發生錯誤時重置結果顯示
+                showMessage('請輸入有效且大於零的熱量和重量。', true, errorElementId);
+                return;
+            }
+            
+            let weightInGrams = originalWeight;
+            
+            // 執行單位轉換：將所有重量轉換為公克 (g)
+            if (type === 'wet') {
+                if (unit === 'oz') {
+                    // 1 oz ≈ 28.3495 g
+                    weightInGrams = originalWeight * 28.3495; 
+                }
+            } else if (type === 'dry') {
+                if (unit === 'kg') {
+                    // 1 kg = 1000 g
+                    weightInGrams = originalWeight * 1000; 
+                } else if (unit === 'lb') {
+                    // 1 lb ≈ 453.592 g
+                    weightInGrams = originalWeight * 453.592; 
+                }
+            }
+
+            // 計算公式：(總熱量 / 總重量(g)) * 100
+            const caloriesPer100g = (totalKcal / weightInGrams) * 100;
+
+            // 格式化結果，保留兩位小數
+            const formattedResult = caloriesPer100g.toFixed(2);
+
+            // 顯示結果 (修正後，這行會成功顯示)
+            resultElement.textContent = `${formattedResult} Kcal`;
+            
+            // 建立紀錄物件並儲存
+            const newRecord = {
+                type: type,
+                brand: brand,
+                name: name,
+                totalKcal: totalKcal,
+                totalWeight: weightInGrams, // 儲存轉換後的公克數
+                originalWeight: originalWeight, // 儲存原始輸入值
+                originalUnit: unit, // 儲存原始單位
+                caloriesPer100g: formattedResult,
+            };
+            
+            addRecord(newRecord);
+
+            // 修正：計算完畢後，只清除輸入欄位，將結果保留在畫面上。
+            clearInputFields(type);
+        }
+    </script>
+</body>
+</html>Initial commit for cat food calculator
